@@ -79,6 +79,8 @@ fn main() {
     let mut prev_state = first_frame["menu"]["state"].to_owned();
     // let mut prev_frame = remove_useless(first_frame);
     let mut prev_frame = first_frame;
+    let mut prev_hits: Value = prev_frame["gameplay"]["hits"]["hitErrorArray"].to_owned();
+    let mut last_dumped_hits = prev_hits.to_owned();
     loop {
         // get ws message
         let msg = read_once(&mut socket);
@@ -90,9 +92,7 @@ fn main() {
 
         // get new state
         let curr_state: Value = curr_frame["menu"]["state"].to_owned();
-
-        let prev_hits: &Value = &prev_frame["gameplay"]["hits"]["hitErrorArray"];
-        let curr_hits: &Value = &curr_frame["gameplay"]["hits"]["hitErrorArray"];
+        let curr_hits: Value = curr_frame["gameplay"]["hits"]["hitErrorArray"].to_owned();
 
         // a play is valid if:
         // the play has at least 1 hit
@@ -100,11 +100,17 @@ fn main() {
         // state changed from 2 (gameplay ended)
         // OR
         // hitcount reset (map restarted, state remained 2)
-        if (!prev_hits.is_null())
+        if (!prev_hits.is_null() && (last_dumped_hits != prev_hits))
             && (((curr_state != prev_state) && (prev_state == 2)) || (curr_hits.is_null()))
         {
             remove_useless(&mut prev_frame);
             println!("Saving data!\n{:#?}", prev_frame);
+            // println!("{}", !prev_hits.is_null());
+            // println!("{}", curr_state != prev_state);
+            // println!("{}", prev_state == 2);
+            // println!("{}", curr_hits.is_null());
+            // println!("{}", prev_hits != last_dumped_hits);
+            last_dumped_hits = prev_hits;
             dump_to_db(&prev_frame, &coll);
         }
 
@@ -117,5 +123,6 @@ fn main() {
         // }
         prev_state = curr_state;
         prev_frame = curr_frame;
+        prev_hits = curr_hits;
     }
 }
