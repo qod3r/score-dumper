@@ -17,12 +17,12 @@ fn dump_to_db(json: &Map<String, Value>, coll: &Collection<Document>) {
 
     doc.insert("timestamp".to_owned(), dt).unwrap();
     let result = coll.insert_one(doc, None).unwrap().inserted_id;
-    println!("inserted {}", result);
+    println!("Mongo _id: {}", result);
 }
 
-fn remove_useless(map: &mut Map<String, Value>) {
+fn remove_useless(json: &mut Map<String, Value>) {
     // remove useless info
-    map.get_mut("gameplay")
+    json.get_mut("gameplay")
         .and_then(|v| v.as_object_mut())
         .and_then(|v| {
             v.remove("hp");
@@ -30,7 +30,7 @@ fn remove_useless(map: &mut Map<String, Value>) {
             Some(v)
         });
 
-    map.get_mut("menu")
+    json.get_mut("menu")
         .and_then(|v| v.as_object_mut())
         .and_then(|v| {
             v.remove("mainMenu");
@@ -40,8 +40,8 @@ fn remove_useless(map: &mut Map<String, Value>) {
         .and_then(|v| v.as_object_mut())
         .and_then(|v| v.remove("strains"));
 
-    map.remove("tourney");
-    map.remove("resultsScreen");
+    json.remove("tourney");
+    json.remove("resultsScreen");
 }
 
 fn read_once(socket: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> String {
@@ -55,9 +55,29 @@ fn read_once(socket: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> String {
     msg
 }
 
+fn print_score(json: &Map<String, Value>) {
+    let song_artist = &json["menu"]["bm"]["metadata"]["artist"].as_str().unwrap();
+    let song_title = &json["menu"]["bm"]["metadata"]["title"].as_str().unwrap();
+    let diff = &json["menu"]["bm"]["metadata"]["difficulty"]
+        .as_str()
+        .unwrap();
+
+    let acc = &json["gameplay"]["accuracy"].as_f64().unwrap();
+    let combo = &json["gameplay"]["combo"]["max"].as_i64().unwrap();
+    let max_combo = &json["menu"]["bm"]["stats"]["maxCombo"].as_i64().unwrap();
+
+    let mods = &json["menu"]["mods"]["str"].as_str().unwrap();
+
+    println!(
+        "\nSaved score on {0} - {1} [{2}] +{6} | {3}% {4}/{5}x ",
+        song_artist, song_title, diff, acc, combo, max_combo, mods
+    );
+    // println!("\t{0} {1}/{2}", acc, combo, max_combo);
+}
+
 fn main() {
     // Connect to the WS server locally
-    print!("Connecting to websocket ... ");
+    print!("Connecting to gosumemory ... ");
     io::stdout().flush().unwrap();
     let (mut socket, _) =
         connect(Url::parse("ws://localhost:24050/ws").unwrap()).expect("Can't connect");
@@ -69,8 +89,9 @@ fn main() {
     io::stdout().flush().unwrap();
     let client = Client::with_options(client_options).unwrap();
     let db = client.database("osu");
-    let coll = db.collection::<Document>("rust_first");
+    let coll = db.collection::<Document>("rust_release_0.1.0");
     println!("OK");
+    println!("Ready.");
 
     let mut first_frame: Map<String, Value> =
         serde_json::from_str(&read_once(&mut socket)).expect("Can't parse to JSON");
@@ -104,23 +125,17 @@ fn main() {
             && (((curr_state != prev_state) && (prev_state == 2)) || (curr_hits.is_null()))
         {
             remove_useless(&mut prev_frame);
-            println!("Saving data!\n{:#?}", prev_frame);
+            // println!("Saving data!\n{:#?}", prev_frame);
+            print_score(&prev_frame);
             // println!("{}", !prev_hits.is_null());
             // println!("{}", curr_state != prev_state);
             // println!("{}", prev_state == 2);
             // println!("{}", curr_hits.is_null());
             // println!("{}", prev_hits != last_dumped_hits);
-            last_dumped_hits = prev_hits;
             dump_to_db(&prev_frame, &coll);
+            last_dumped_hits = prev_hits;
         }
 
-        // if ((curr_state != prev_state) && (prev_state == 2) && (!prev_hits.is_null()))
-        //     || ((!prev_hits.is_null()) && (curr_hits.is_null()))
-        // {
-        //     remove_useless(&mut prev_frame);
-        //     println!("Saving data!\n{:#?}", prev_frame);
-        //     dump_to_db(&prev_frame, &coll);
-        // }
         prev_state = curr_state;
         prev_frame = curr_frame;
         prev_hits = curr_hits;
