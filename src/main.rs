@@ -55,6 +55,15 @@ fn read_once(socket: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> String {
     msg
 }
 
+fn hit_sum(h: &Map<String, Value>) -> u64 {
+    let _300 = h["300"].as_u64().unwrap();
+    let _100 = h["100"].as_u64().unwrap();
+    let _50 = h["50"].as_u64().unwrap();
+    let _0 = h["0"].as_u64().unwrap();
+
+    _300 + _100 + _50 + _0
+}
+
 fn print_score(json: &Map<String, Value>) {
     let song_artist = &json["menu"]["bm"]["metadata"]["artist"].as_str().unwrap();
     let song_title = &json["menu"]["bm"]["metadata"]["title"].as_str().unwrap();
@@ -100,8 +109,8 @@ fn main() {
     let mut prev_state = first_frame["menu"]["state"].to_owned();
     // let mut prev_frame = remove_useless(first_frame);
     let mut prev_frame = first_frame;
-    let mut prev_hits: Value = prev_frame["gameplay"]["hits"]["hitErrorArray"].to_owned();
-    let mut last_dumped_hits = prev_hits.to_owned();
+    let mut prev_hits = hit_sum(prev_frame["gameplay"]["hits"].as_object().unwrap());
+    let mut last_dumped_hits = u64::MAX;
     loop {
         // get ws message
         let msg = read_once(&mut socket);
@@ -113,7 +122,7 @@ fn main() {
 
         // get new state
         let curr_state: Value = curr_frame["menu"]["state"].to_owned();
-        let curr_hits: Value = curr_frame["gameplay"]["hits"]["hitErrorArray"].to_owned();
+        let curr_hits = hit_sum(curr_frame["gameplay"]["hits"].as_object().unwrap());
 
         // a play is valid if:
         // the play has at least 1 hit
@@ -121,8 +130,8 @@ fn main() {
         // state changed from 2 (gameplay ended)
         // OR
         // hitcount reset (map restarted, state remained 2)
-        if (!prev_hits.is_null() && (last_dumped_hits != prev_hits))
-            && (((curr_state != prev_state) && (prev_state == 2)) || (curr_hits.is_null()))
+        if (prev_hits > 0 && (last_dumped_hits != prev_hits))
+            && (((curr_state != prev_state) && (prev_state == 2)) || (curr_hits == 0))
         {
             remove_useless(&mut prev_frame);
             // println!("Saving data!\n{:#?}", prev_frame);
