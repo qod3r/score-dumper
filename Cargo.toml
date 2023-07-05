@@ -1,6 +1,6 @@
 [package]
 name = "score-dumper"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,6 +9,7 @@ edition = "2021"
 bson = { version = "2.6.1", features = ["chrono-0_4"] }
 chrono = "0.4.26" 
 mongodb = {version = "2.6.0", default-features = false, features = ["sync"] }
+serde = "1.0.165"
 serde_json = "1.0.99"
 tokio = "1.29.1"
 tungstenite = "0.19.0"
