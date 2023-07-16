@@ -10,7 +10,7 @@ use utils::read_once;
 fn main() {
     // Connect to gosumemory
     let mut socket = utils::connect_gosu("ws://localhost:24050/ws");
-    
+
     // Connect to db
     let db = utils::connect_db("mongodb://localhost:27017", "osu");
     let coll_name = "rust_buffered";
@@ -32,7 +32,13 @@ fn main() {
     let mut last_submitted_sum = u32::MAX;
     loop {
         let msg = read_once(&mut socket);
-        let frame: Model = serde_json::from_str(&msg).expect("Can't parse to Model");
+        let frame: Model = match serde_json::from_str(&msg) {
+            Ok(f) => f,
+            Err(e) => {
+                println!("Can't parse to Model: {}", e.to_string());
+                continue;
+            }
+        };
         let curr_state = frame.menu.state;
 
         // // skip if the game is closed
@@ -59,7 +65,7 @@ fn main() {
             if (max.gameplay.sum() != 0) && (max.gameplay.sum() != last_submitted_sum) {
                 utils::print_score(max);
                 utils::dump_to_db(max, &coll);
-                
+
                 // TODO: figure out how to not duplicate a submit after retrying from the results screen instead of checking the sum
                 // BUG: valid subsequent scores with the same score and hit_sum are not submitted
                 // probably not that important since it's very rare
