@@ -11,7 +11,7 @@ use url::Url;
 use crate::model::Model;
 
 pub fn connect_db(uri: &str, db: &str) -> Database {
-    print!("Connecting to mongodb ... ");
+    print!("Connecting to mongodb ... "); // TODO: catch errors
     io::stdout().flush().unwrap();
     let client_options = ClientOptions::parse(uri).unwrap();
     let client = Client::with_options(client_options).unwrap();
@@ -26,7 +26,7 @@ pub fn dump_to_db(model: &Model, coll: &Collection<Document>) {
 }
 
 pub fn connect_gosu(uri: &str) -> WebSocket<MaybeTlsStream<TcpStream>> {
-    print!("Connecting to gosumemory ... ");
+    print!("Connecting to gosumemory ... "); // TODO: wait till its launched
     io::stdout().flush().unwrap();
     let (socket, _) = connect(Url::parse(uri).unwrap()).expect("Can't connect");
     println!("OK");

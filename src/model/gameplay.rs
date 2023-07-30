@@ -83,17 +83,25 @@ pub struct Gameplay {
 }
 
 impl Gameplay {
-    pub fn sum(&self) -> u32 {
-        self.score + self.hits.hit_sum()
+    pub fn is_empty(&self) -> bool {
+        // surely this will work
+        self.score == 0
+        && self.accuracy == 0.0
+        && self.hits.hit_sum() == 0
+        && self.combo.max == 0
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.score > 0
+        && self.accuracy > 0.0
+        && self.hits.hit_sum() > 0
+        && self.combo.max > 0
     }
 }
 
 impl PartialEq for Gameplay {
     fn eq(&self, other: &Self) -> bool {
-        // consider self == other
-        // when sum of score and hit_sum() are equal
-        self.sum() == other.sum()
-        // self.score == other.score && self.hits.hit_sum() == other.hits.hit_sum()
+        self.score == other.score
     }
 }
 
@@ -101,20 +109,12 @@ impl Eq for Gameplay {}
 
 impl PartialOrd for Gameplay {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        // consider self > other
-        // when both score and hit_sum() are bigger
-        // Some(self.sum().cmp(&other.sum()))
         Some(self.cmp(other))
-        // Some(
-        //     self.score.cmp(&other.score)
-        //         .then(
-        //             self.hits.hit_sum().cmp(&other.hits.hit_sum())),
-        // )
     }
 }
 
 impl Ord for Gameplay {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.sum().cmp(&other.sum())
+        self.score.cmp(&other.score)
     }
 }
