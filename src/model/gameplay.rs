@@ -48,10 +48,11 @@ impl ScoreStats {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct PP {
     pub current: f64,
     pub fc: f64,
+    pub ss: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
