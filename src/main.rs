@@ -1,11 +1,14 @@
 mod model;
-mod utils;
 mod pp;
+mod utils;
 
 use model::Model;
 use mongodb::bson::Document;
 use std::collections::VecDeque;
 use utils::read_once;
+
+use crate::pp::PPCalc;
+use std::time::Instant;
 
 // TODO: async
 fn main() {
@@ -33,8 +36,11 @@ fn main() {
     let mut last_submitted_score = u32::MAX;
     // prevent logging spam when gosu freaks out at aspire maps
     let mut skipped_recently = false;
+    let mut curr_path = String::from("");
+    let mut calculator: Option<PPCalc> = None;
     loop {
         let msg = read_once(&mut socket);
+        let start = Instant::now();
         let frame: Model = match serde_json::from_str(&msg) {
             Ok(f) => f,
             Err(e) => {
@@ -54,28 +60,55 @@ fn main() {
         if curr_state == -1 || frame.gameplay.game_mode != 0 {
             continue;
         }
+        // bruh
+        else if curr_state == 2 || curr_state == 7 || curr_state == 14 {
+            // per-map PPCalc
+            if curr_path.ne(&frame.menu.bm.path.file) {
+                let calc_path = format!(
+                    "{osu}\\Songs\\{folder}\\{file}",
+                    osu = frame.settings.folders.game,
+                    folder = frame.menu.bm.path.folder,
+                    file = frame.menu.bm.path.file
+                );
+                calculator = match PPCalc::from_path(&calc_path, frame.menu.mods.num) {
+                    Ok(c) => Some(c),
+                    _ => None,
+                };
+                curr_path = frame.menu.bm.path.file.clone();
+            }
+        }
 
         // keep the last `buf_max` frames
         if buf.len() >= buf_max {
             buf.pop_front();
         }
         buf.push_back(frame);
-
-        let curr_frame = buf.back().expect("Can't get back of buf"); // TODO: match this
+        // TODO: match this
+        let curr_frame = buf.back().expect("Can't get back of buf");
         // search for a submittable score when
         // state changed from 2 (quit or finish)
         // state didn't change but gameplay values did (restart)
         if (prev_state == 2 && curr_state != 2) || (curr_frame.gameplay.is_empty()) {
             // get the frame with the highest score
-            let max = buf
-                .iter()
-                .max_by_key(|f| &f.gameplay) // if several frames are equal, returns the most recent one
-                .expect("Couldn't get max by key"); // TODO: match this
+            let mut max = buf
+                .iter_mut()
+                // TODO
+                // (comparing score directly instead of the `Ord` implementaion)
+                // VERY BAD    v PUT THE & BACK AS SOON AS POSSIBLE
+                .max_by_key(|f| f.gameplay.score) // if several frames are equal, returns the most recent one
+                // TODO: match this
+                .expect("Couldn't get max by key");
+
             // make sure it has stuff in it and that it wasn't submitted already
             if (max.gameplay.is_valid()) && (max.gameplay.score != last_submitted_score) {
+                match calculator {
+                    Some(ref c) => {
+                        max.gameplay.pp = c.pp(&mut max);
+                    }
+                    None => { /* keep gosu values */ }
+                }
                 utils::print_score(max);
                 utils::dump_to_db(max, &coll);
-
                 // TODO: figure out how to not duplicate a submit after retrying from the results screen instead of checking the score
                 // BUG: valid subsequent scores with the same `score` are not submitted
                 //      probably not that important since it's very rare
@@ -84,5 +117,7 @@ fn main() {
             }
         }
         prev_state = curr_state;
+        let duration = start.elapsed();
+        println!("took {:?}", duration);
     }
 }

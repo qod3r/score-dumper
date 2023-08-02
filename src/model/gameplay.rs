@@ -52,6 +52,7 @@ impl ScoreStats {
 pub struct PP {
     pub current: f64,
     pub fc: f64,
+    #[serde(default)]
     pub ss: f64,
 }
 

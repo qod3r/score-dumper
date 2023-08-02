@@ -10,7 +10,7 @@ impl PPCalc {
     pub fn from_path(path: &String, mods: u32) -> Result<Self, ()> {
         match Beatmap::from_path(path) {
             Ok(bm) => Ok(Self { map: bm, mods }),
-            Err(e) => Err(println!("{}", e)),
+            Err(e) => Err(println!("error opening map: {0} {1}", e, path)),
         }
     }
 
@@ -34,7 +34,7 @@ impl PPCalc {
 
     pub fn current(&self, frame: &model::Model) -> f64 {
         let state = Self::get_state(frame);
-        
+
         OsuPP::new(&self.map)
             .mods(self.mods)
             .state(state)
@@ -66,7 +66,7 @@ impl PPCalc {
         model::gameplay::PP {
             current: self.current(frame),
             fc: self.fc(frame),
-            ss: self.ss()
+            ss: self.ss(),
         }
     }
 }
