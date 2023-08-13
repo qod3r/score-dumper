@@ -88,7 +88,7 @@ fn main() {
         // state didn't change but gameplay values did (restart)
         if (prev_state == 2 && curr_state != 2) || (curr_frame.gameplay.is_empty()) {
             // get the frame with the highest score
-            let mut max = buf
+            let max = buf
                 .iter_mut()
                 .max_by_key(|f| f.gameplay.score)
                 .expect("Couldn't get max by key");
@@ -97,7 +97,7 @@ fn main() {
             if (max.gameplay.is_valid()) && (max.gameplay.score != last_submitted_score) {
                 match calculator {
                     Some(ref calc) => {
-                        max.gameplay.pp = calc.pp(&mut max);
+                        max.gameplay.pp = calc.pp(&max);
                     }
                     None => { /* keep gosu values */ }
                 }
