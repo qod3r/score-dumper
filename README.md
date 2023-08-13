@@ -9,5 +9,5 @@
 
 ### TODO
 - [ ] better readme
-- [ ] rosu-pp values instead of outdaded gosu ones
+- [x] rosu-pp values instead of outdaded gosu ones
 - [ ] support for [tosu](https://github.com/KotRikD/tosu)

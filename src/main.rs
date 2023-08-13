@@ -8,7 +8,6 @@ use std::collections::VecDeque;
 use utils::read_once;
 
 use crate::pp::PPCalc;
-use std::time::Instant;
 
 // TODO: async
 fn main() {
@@ -40,7 +39,6 @@ fn main() {
     let mut calculator: Option<PPCalc> = None;
     loop {
         let msg = read_once(&mut socket);
-        let start = Instant::now();
         let frame: Model = match serde_json::from_str(&msg) {
             Ok(f) => f,
             Err(e) => {
@@ -83,7 +81,7 @@ fn main() {
             buf.pop_front();
         }
         buf.push_back(frame);
-        // TODO: match this
+
         let curr_frame = buf.back().expect("Can't get back of buf");
         // search for a submittable score when
         // state changed from 2 (quit or finish)
@@ -92,18 +90,14 @@ fn main() {
             // get the frame with the highest score
             let mut max = buf
                 .iter_mut()
-                // TODO
-                // (comparing score directly instead of the `Ord` implementaion)
-                // VERY BAD    v PUT THE & BACK AS SOON AS POSSIBLE
-                .max_by_key(|f| f.gameplay.score) // if several frames are equal, returns the most recent one
-                // TODO: match this
+                .max_by_key(|f| f.gameplay.score)
                 .expect("Couldn't get max by key");
 
             // make sure it has stuff in it and that it wasn't submitted already
             if (max.gameplay.is_valid()) && (max.gameplay.score != last_submitted_score) {
                 match calculator {
-                    Some(ref c) => {
-                        max.gameplay.pp = c.pp(&mut max);
+                    Some(ref calc) => {
+                        max.gameplay.pp = calc.pp(&mut max);
                     }
                     None => { /* keep gosu values */ }
                 }
@@ -117,7 +111,5 @@ fn main() {
             }
         }
         prev_state = curr_state;
-        let duration = start.elapsed();
-        println!("took {:?}", duration);
     }
 }
